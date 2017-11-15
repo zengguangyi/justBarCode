@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>条形码</title>
+    <script src="scripts/vue2.js"></script>
+    <script src="https://unpkg.com/vue-lazyload/vue-lazyload.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.11.8/xlsx.min.js"></script>
+    <style>
+        .content {
+            display: flex;
+            flex-direction: row;
+            justify-content: flex-start;
+            flex-wrap: wrap;
+        }
+        
+        .list-box {
+            text-align: center;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="app">
+        <h4>转换条形码以一页打印多条数据，供PDA扫描用:</h4>
+        <input type="file" id="file-xlsx" @change="fileInput" />
+        <div class="content">
+            <div v-for="item in data_list" class="list-box" style="text-algin: center">
+                <p>{{ item['产品序列号'] }}</p>
+                <img style="width: 350px" v-lazy="item.bar_code" :alt="item['资产标签号']">
+                <!-- <lazy-component @show="handler">
+                    <img class="mini-cover" src="https://cn.vuejs.org/images/logo.png" width="100%" height="400">
+                </lazy-component> -->
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        Vue.use(VueLazyload, {
+            lazyComponent: true,
+            loading: 'img.png'
+        });
+        new Vue({
+            el: "#app",
+            data: {
+                // excel解析数据
+                data_list: [],
+                // 条形码api
+                bar_code_url: 'http://www.qinms.com/webapp/barcode/barc.ashx?t1=96&t2=40&t3=3&t4=3&cd='
+            },
+            methods: {
+                // handler(component) {
+                //     console.log('this component is showing')
+                // },
+                fileInput: function() {
+                    var fileInput = document.getElementById('file-xlsx'),
+                        file = fileInput.files[0];
+
+                    let that = this;
+
+                    let reader = new FileReader();
+                    reader.onload = function(e) {
+                        let data = e.target.result;
+                        let workbook = XLSX.read(data, {
+                            type: 'binary'
+                        });
+                        workbook.SheetNames.forEach(function(sheetName) {
+                            that.data_list = XLSX.utils.sheet_to_row_object_array(workbook.Sheets[sheetName]);
+                        });
+                        that.addBarCode(that.data_list);
+                    }
+                    reader.readAsBinaryString(file);
+                },
+                // 生成添加条形码src
+                addBarCode: function(obj) {
+                    for (idx in obj) {
+                        this.data_list[idx].bar_code = `${this.bar_code_url}${obj[idx]['资产标签号']}`;
+                    }
+                }
+            }
+        })
+    </script>
+</body>
+
+</html>
